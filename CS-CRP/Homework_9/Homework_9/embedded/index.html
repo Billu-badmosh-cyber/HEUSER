@@ -1,1 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Embedded Project</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 30px auto; padding: 0 16px; line-height: 1.6; }
+    .btn { display: inline-block; padding: 10px 16px; margin: 8px 8px 8px 0; background: #1d4ed8; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold; }
+    .btn.back { background: #e5e7eb; color: #111; }
+    img { max-width: 100%; border: 1px solid #ccc; border-radius: 6px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <a class="btn back" href="/">Back to Home</a>
+  <a class="btn" href="https://wokwi.com/projects/481869429343054849" target="_blank">Open Wokwi Project</a>
 
+  <h1>Smart Room Monitor and Bus Collision Solver</h1>
+  <p><strong>Technology:</strong> I2C</p>
+
+  <h2>Parts Used</h2>
+  <ul>
+    <li>ESP32</li>
+    <li>SSD1306 OLED (0x3C)</li>
+    <li>MPU6050 Accelerometer/Gyro (0x69 via ADO pin)</li>
+    <li>DS1307 RTC (0x68)</li>
+    <li>I2C LCD1602 (0x27)</li>
+  </ul>
+
+  <h2>How It Uses I2C to Its Full Extent</h2>
+  <p>
+    This project uses only I2C to connect multiple devices on two wires while avoiding address conflicts.
+    It scans the bus at startup, resolves the 0x68 address clash between the DS1307 RTC and MPU6050 by
+    using 0x69 for the MPU6050, and updates a live tilt graph on the OLED and time on the LCD.
+  </p>
+
+  <h2>Screenshot</h2>
+  <img src="wokwi-proof.png" alt="Wokwi simulation running" />
+</body>
+</html>
