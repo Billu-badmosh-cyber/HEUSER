@@ -96,6 +96,23 @@ def page_not_found(e):
     return send_from_directory(BASE_DIR, "404.html"), 404
 
 
+
+from pathlib import Path
+from flask import Flask, send_from_directory
+
+BASE_DIR = Path(__file__).resolve().parent
+# If you already have `app = Flask(...)`, keep your existing app instance and routes.
+
+@app.route("/embedded")
+@app.route("/embedded/")
+def embedded_page():
+    return send_from_directory(BASE_DIR / "embedded", "index.html")
+
+@app.route("/embedded/<path:filename>")
+def embedded_files(filename):
+    return send_from_directory(BASE_DIR / "embedded", filename)
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
