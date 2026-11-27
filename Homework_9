@@ -1,0 +1,451 @@
+flask==3.1.0
+gunicorn==23.0.0
+requests==2.32.3
+__pycache__/
+*.pyc
+venv/
+.venv/
+.env
+.DS_Store
+import os
+import time
+import requests
+from flask import Flask, send_from_directory, redirect, jsonify
+
+app = Flask(__name__)
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Simple in-memory cache (Bonus Point: remembers API answers for 5 minutes)
+CACHE = {"data": None, "timestamp": 0}
+CACHE_DURATION = 300  # seconds
+
+
+@app.route("/")
+def home():
+    return send_from_directory(os.path.join(BASE_DIR, "home"), "index.html")
+
+
+# Redirect /game -> /game/ so relative CSS, JS, and image links in Homework 6 work
+@app.route("/game")
+def game_redirect():
+    return redirect("/game/")
+
+
+@app.route("/game/")
+def game_index():
+    return send_from_directory(os.path.join(BASE_DIR, "game"), "index.html")
+
+
+@app.route("/game/<path:filename>")
+def game_static(filename):
+    return send_from_directory(os.path.join(BASE_DIR, "game"), filename)
+
+
+# Redirect /portfolio -> /portfolio/ so relative CSS, JS, and image links in Homework 8 work
+@app.route("/portfolio")
+def portfolio_redirect():
+    return redirect("/portfolio/")
+
+
+@app.route("/portfolio/")
+def portfolio_index():
+    return send_from_directory(os.path.join(BASE_DIR, "portfolio"), "index.html")
+
+
+@app.route("/portfolio/<path:filename>")
+def portfolio_static(filename):
+    return send_from_directory(os.path.join(BASE_DIR, "portfolio"), filename)
+
+
+@app.route("/api")
+@app.route("/api/")
+def api_page():
+    return send_from_directory(os.path.join(BASE_DIR, "api"), "index.html")
+
+
+@app.route("/api/pokemon")
+def get_pokemon_data():
+    now = time.time()
+    if CACHE["data"] and (now - CACHE["timestamp"] < CACHE_DURATION):
+        return jsonify({"source": "cache", "pokemon": CACHE["data"]})
+
+    try:
+        # Fetch first 24 Pokemon from PokeAPI
+        list_res = requests.get("https://pokeapi.co/api/v2/pokemon?limit=24", timeout=10)
+        list_res.raise_for_status()
+        results = list_res.json()["results"]
+
+        cards = []
+        for item in results:
+            detail_res = requests.get(item["url"], timeout=10)
+            detail_res.raise_for_status()
+            d = detail_res.json()
+            cards.append({
+                "id": d["id"],
+                "name": d["name"].capitalize(),
+                "image": d["sprites"]["other"]["official-artwork"]["front_default"],
+                "types": [t["type"]["name"] for t in d["types"]],
+                "hp": d["stats"][0]["base_stat"],
+                "attack": d["stats"][1]["base_stat"],
+                "defense": d["stats"][2]["base_stat"],
+                "height": d["height"] / 10,
+                "weight": d["weight"] / 10,
+            })
+
+        CACHE["data"] = cards
+        CACHE["timestamp"] = now
+        return jsonify({"source": "live", "pokemon": cards})
+
+    except Exception as e:
+        return jsonify({"error": "Could not load live data from PokéAPI. Please check your connection and try again."}), 502
+
+
+# Custom themed 404 page (Bonus Point)
+@app.errorhandler(404)
+def page_not_found(e):
+    return send_from_directory(BASE_DIR, "404.html"), 404
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CS CRP - Web Server Hub</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .container {
+      text-align: center;
+      max-width: 680px;
+      width: 100%;
+    }
+    h1 { font-size: 2.4rem; margin-bottom: 10px; }
+    p { color: #94a3b8; margin-bottom: 36px; font-size: 1.05rem; }
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 18px;
+    }
+    a.btn {
+      display: block;
+      text-decoration: none;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #f8fafc;
+      padding: 24px 18px;
+      border-radius: 16px;
+      font-size: 1.15rem;
+      font-weight: 600;
+      transition: transform 0.2s, border-color 0.2s, background 0.2s;
+    }
+    a.btn:hover {
+      transform: translateY(-4px);
+      border-color: #38bdf8;
+      background: #0f172a;
+    }
+    .sub { display: block; font-size: 0.85rem; color: #94a3b8; font-weight: 400; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>My Python Web Server</h1>
+    <p>CS CRP Homework 9 — One Flask server hosting all my projects.</p>
+    <div class="buttons">
+      <a class="btn" href="/game/">
+        🎮 Game
+        <span class="sub">Homework 6</span>
+      </a>
+      <a class="btn" href="/portfolio/">
+        💼 Portfolio
+        <span class="sub">Homework 8</span>
+      </a>
+      <a class="btn" href="/api">
+        ⚡ Live API Vault
+        <span class="sub">Homework 9</span>
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PokéVault — Live API Cards</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0b1120;
+      color: #f1f5f9;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    header {
+      max-width: 1100px;
+      margin: 0 auto 28px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .back-btn {
+      text-decoration: none;
+      color: #38bdf8;
+      border: 1px solid #38bdf8;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .concept {
+      max-width: 1100px;
+      margin: 0 auto 24px;
+      background: #1e293b;
+      border-left: 4px solid #38bdf8;
+      padding: 16px 20px;
+      border-radius: 10px;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+    .controls {
+      max-width: 1100px;
+      margin: 0 auto 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    input, select {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #334155;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 1rem;
+    }
+    input { flex: 1; min-width: 200px; }
+    #status {
+      text-align: center;
+      padding: 40px;
+      font-size: 1.15rem;
+      color: #94a3b8;
+    }
+    .error {
+      color: #fca5a5 !important;
+      background: #450a0a;
+      border: 1px solid #ef4444;
+      max-width: 600px;
+      margin: 20px auto;
+      border-radius: 12px;
+    }
+    .grid {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: linear-gradient(160deg, #1e293b, #0f172a);
+      border: 2px solid #334155;
+      border-radius: 18px;
+      padding: 18px;
+      transition: transform 0.25s, box-shadow 0.25s;
+    }
+    .card:hover {
+      transform: translateY(-6px) rotate(-0.5deg);
+      box-shadow: 0 12px 28px rgba(56, 189, 248, 0.2);
+      border-color: #38bdf8;
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .id-badge { color: #94a3b8; font-weight: 700; font-size: 0.9rem; }
+    .card img {
+      width: 100%;
+      height: 160px;
+      object-fit: contain;
+      margin: 8px 0;
+      filter: drop-shadow(0 8px 12px rgba(0,0,0,0.5));
+    }
+    .types { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    .type-pill {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #334155;
+      color: #e2e8f0;
+      font-weight: 600;
+    }
+    .stat-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 6px;
+    }
+    .stat-label { width: 34px; color: #94a3b8; }
+    .bar-bg { flex: 1; height: 7px; background: #334155; border-radius: 999px; overflow: hidden; }
+    .bar-fill { height: 100%; background: #38bdf8; border-radius: 999px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>⚡ PokéVault Collector</h1>
+    <a class="back-btn" href="/">← Back to Home</a>
+  </header>
+
+  <div class="concept">
+    <strong>About this page:</strong> Instead of showing raw JSON or a plain table, this page turns live PokéAPI data into an interactive trading-card collection with visual power bars for HP, Attack, and Defense. My Flask backend fetches and caches the data for 5 minutes so visitors get fast responses, and users can search by name or filter cards by elemental type.
+  </div>
+
+  <div class="controls">
+    <input type="text" id="search" placeholder="Search Pokémon by name..." />
+    <select id="typeFilter">
+      <option value="all">All Types</option>
+    </select>
+  </div>
+
+  <div id="status">⏳ Loading live Pokémon cards from the server...</div>
+  <div class="grid" id="grid"></div>
+
+  <script>
+    let allPokemon = [];
+    const grid = document.getElementById("grid");
+    const statusEl = document.getElementById("status");
+    const searchInput = document.getElementById("search");
+    const typeFilter = document.getElementById("typeFilter");
+
+    function renderCards(list) {
+      grid.innerHTML = "";
+      if (list.length === 0) {
+        statusEl.textContent = "No Pokémon match your search.";
+        statusEl.style.display = "block";
+        return;
+      }
+      statusEl.style.display = "none";
+      list.forEach(p => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="card-top">
+            <h2>${p.name}</h2>
+            <span class="id-badge">#${String(p.id).padStart(3, "0")}</span>
+          </div>
+          <img src="${p.image}" alt="${p.name}" loading="lazy" />
+          <div class="types">
+            ${p.types.map(t => `<span class="type-pill">${t}</span>`).join("")}
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">HP</span>
+            <div class="bar-bg"><div class="bar-fill" style="width:${Math.min(p.hp, 100)}%"></div></div>
+            <span>${p.hp}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">ATK</span>
+            <div class="bar-bg"><div class="bar-fill" style="width:${Math.min(p.attack, 100)}%"></div></div>
+            <span>${p.attack}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">DEF</span>
+            <div class="bar-bg"><div class="bar-fill" style="width:${Math.min(p.defense, 100)}%"></div></div>
+            <span>${p.defense}</span>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function applyFilters() {
+      const q = searchInput.value.toLowerCase();
+      const t = typeFilter.value;
+      const filtered = allPokemon.filter(p =>
+        p.name.toLowerCase().includes(q) && (t === "all" || p.types.includes(t))
+      );
+      renderCards(filtered);
+    }
+
+    async function loadData() {
+      try {
+        const res = await fetch("/api/pokemon");
+        if (!res.ok) throw new Error("Server error");
+        const data = await res.json();
+        allPokemon = data.pokemon;
+
+        const types = [...new Set(allPokemon.flatMap(p => p.types))].sort();
+        types.forEach(t => {
+          const opt = document.createElement("option");
+          opt.value = t;
+          opt.textContent = t.toUpperCase();
+          typeFilter.appendChild(opt);
+        });
+
+        renderCards(allPokemon);
+      } catch (err) {
+        statusEl.className = "error";
+        statusEl.textContent = "⚠️ Oops! Could not load live Pokémon data right now. Please check your internet connection and refresh.";
+      }
+    }
+
+    searchInput.addEventListener("input", applyFilters);
+    typeFilter.addEventListener("change", applyFilters);
+    loadData();
+  </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>404 — Page Not Found</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      margin: 0;
+    }
+    h1 { font-size: 5rem; color: #38bdf8; margin: 0; }
+    p { color: #94a3b8; margin: 12px 0 24px; }
+    a {
+      text-decoration: none;
+      background: #38bdf8;
+      color: #0f172a;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <h1>404</h1>
+  <p>Oops! Ye page is server par maujood nahi hai.</p>
+  <a href="/">Go Back Home</a>
+</body>
+</html>
