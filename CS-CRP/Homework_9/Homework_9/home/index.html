@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CS CRP — Web Server Hub</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .container { text-align: center; max-width: 680px; width: 100%; }
+    h1 { font-size: 2.4rem; margin-bottom: 10px; }
+    p { color: #94a3b8; margin-bottom: 36px; font-size: 1.05rem; }
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 18px;
+    }
+    a.btn {
+      display: block;
+      text-decoration: none;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #f8fafc;
+      padding: 24px 18px;
+      border-radius: 16px;
+      font-size: 1.15rem;
+      font-weight: 600;
+      transition: transform 0.2s, border-color 0.2s, background 0.2s;
+    }
+    a.btn:hover {
+      transform: translateY(-4px);
+      border-color: #38bdf8;
+      background: #0f172a;
+    }
+    .sub { display: block; font-size: 0.85rem; color: #94a3b8; font-weight: 400; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>My Python Web Server</h1>
+    <p>CS CRP Homework 9 — One Flask server hosting all my projects.</p>
+    <div class="buttons">
+      <a class="btn" href="/game/">
+        🎮 Game
+        <span class="sub">Homework 6</span>
+      </a>
+      <a class="btn" href="/portfolio/">
+        💼 Portfolio
+        <span class="sub">Homework 8</span>
+      </a>
+      <a class="btn" href="/api">
+        ⚡ Live API Vault
+        <span class="sub">Homework 9</span>
+      </a>
+    </div>
+  </div>
+</body>
+</html>
